@@ -55,7 +55,13 @@ TOOL_PATH=
 rwildcard = $(strip $(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2) $(filter $(subst *,%,$2),$d)))
 
 # Collect all application files in the current directory and its subdirectories
-PROJ_FILES = $(call rwildcard, , *.c *.h *.S)
+PROJ_FILES := $(call rwildcard, lib/newlib/, *.c) \
+			  $(call rwildcard, startup_stm32f0xx.S, *.S) \
+			  $(call rwildcard, lib/CMSIS/Include/,*.h) \
+			  $(call rwildcard, lib/CMSIS-Device/, *.S *.c *.h) \
+			  $(filter-out $(call rwildcard, lib/STM32F0xx_HAL_Driver/, *_template.c), $(call rwildcard, lib/STM32F0xx_HAL_Driver/, *.S *.c *.h)) \
+			  $(call rwildcard, inc/, *.S *.c *.h) \
+			  $(call rwildcard, src/, *.S *.c *.h)
 
 #|--------------------------------------------------------------------------------------|
 #| Toolchain binaries                                                                   |
@@ -137,6 +143,7 @@ $(BIN_PATH)/$(PROJ_NAME).srec : $(BIN_PATH)/$(PROJ_NAME).elf
 	@echo +++ Build complete [$(notdir $@)]
 
 $(BIN_PATH)/$(PROJ_NAME).elf : $(AOBJS) $(COBJS) 
+	@echo $(PROJ_FILES)
 	@echo +++ Linking [$(notdir $@)]
 	@$(LN) $(LFLAGS) -o $@ $(patsubst %.o,$(OBJ_PATH)/%.o,$(^F)) $(LIBS)
 
