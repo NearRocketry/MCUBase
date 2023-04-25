@@ -45,6 +45,15 @@ TOOL_PATH=
 
 
 #|--------------------------------------------------------------------------------------|
+#| Configure device type                                                                |
+#|--------------------------------------------------------------------------------------|
+# Configure the device type. This is used to select the correct startup code file and 
+# linker script file. Startup script templates are defined in the CMSIS-Device project at 
+# the following location: lib/CMSIS-Device/Source/Templates/gcc. s.
+PART=STM32F072xB
+STARTUP_SCRIPT=startup_stm32f072xb.s
+
+#|--------------------------------------------------------------------------------------|
 #| Collect project files                                                                |
 #|--------------------------------------------------------------------------------------|
 # Recursive wildcard function implementation. Example usages:
@@ -56,9 +65,9 @@ rwildcard = $(strip $(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2) $(filte
 
 # Collect all application files in the current directory and its subdirectories
 PROJ_FILES := $(call rwildcard, lib/newlib/, *.c) \
-			  $(call rwildcard, startup_stm32f0xx.S, *.S) \
+			  $(call rwildcard, lib/CMSIS-Device/Source/Templates/gcc/$(STARTUP_SCRIPT), *.S) \
 			  $(call rwildcard, lib/CMSIS/Include/,*.h) \
-			  $(call rwildcard, lib/CMSIS-Device/, *.S *.c *.h) \
+			  $(filter-out system_stm32f0xx.c, $(call rwildcard, lib/CMSIS-Device/, *.S *.c *.h)) \
 			  $(filter-out $(call rwildcard, lib/STM32F0xx_HAL_Driver/, *_template.c), $(call rwildcard, lib/STM32F0xx_HAL_Driver/, *.S *.c *.h)) \
 			  $(call rwildcard, inc/, *.S *.c *.h) \
 			  $(call rwildcard, src/, *.S *.c *.h)
@@ -91,7 +100,6 @@ BIN_PATH = bin
 INC_PATH = $(patsubst %/,%,$(patsubst %,-I%,$(sort $(foreach file,$(filter %.h,$(PROJ_FILES)),$(dir $(file))))))
 LIB_PATH  = 
 
-
 #|--------------------------------------------------------------------------------------|
 #| Options for toolchain binaries                                                       |
 #|--------------------------------------------------------------------------------------|
@@ -102,7 +110,7 @@ STDFLAGS   += -fdata-sections -ffunction-sections -Wall -g3
 OPTFLAGS    = -Oz
 DEPFLAGS  = -MT $@ -MMD -MP -MF $(OBJ_PATH)/$*.d
 CFLAGS      = $(STDFLAGS) $(OPTFLAGS)
-CFLAGS     += -DSTM32F072xB -DUSE_HAL_DRIVER -DUSE_FULL_LL_DRIVER
+CFLAGS     += -D$(PART) -DUSE_HAL_DRIVER -DUSE_FULL_LL_DRIVER
 CFLAGS     += -D__HEAP_SIZE=$(HEAP_SIZE) -D__STACK_SIZE=$(STACK_SIZE)
 CFLAGS     += $(INC_PATH)
 AFLAGS      = $(CFLAGS)
@@ -133,7 +141,7 @@ COBJS = $(patsubst %.c,%.o,$(PROJ_CSRCS))
 #| Make ALL                                                                             |
 #|--------------------------------------------------------------------------------------|
 .PHONY: all
-all: $(BIN_PATH)/$(PROJ_NAME).srec
+all: $(BIN_PATH)/$(PROJ_NAME).srec 
 
 $(BIN_PATH)/$(PROJ_NAME).srec : $(BIN_PATH)/$(PROJ_NAME).elf
 	@$(OC) $< $(OFLAGS) $@
@@ -147,6 +155,9 @@ $(BIN_PATH)/$(PROJ_NAME).elf : $(AOBJS) $(COBJS)
 	@echo +++ Linking [$(notdir $@)]
 	@$(LN) $(LFLAGS) -o $@ $(patsubst %.o,$(OBJ_PATH)/%.o,$(^F)) $(LIBS)
 
+# Create the object directory if it does not exist yet
+check:
+	[ -d $(OBJ_PATH) ] || mkdir -p $(OBJ_PATH)
 
 #|--------------------------------------------------------------------------------------|
 #| Compile and assemble                                                                 |
@@ -165,6 +176,7 @@ $(COBJS): %.o: %.c $(OBJ_PATH)/%.d
 #|--------------------------------------------------------------------------------------|
 .PHONY: clean
 clean: 
+	[ -d $(OBJ_PATH) ] || mkdir -p $(OBJ_PATH)
 	@echo +++ Cleaning build environment
 	@$(RM) $(RMFLAGS) $(foreach file,$(AOBJS),$(OBJ_PATH)/$(file))
 	@$(RM) $(RMFLAGS) $(foreach file,$(COBJS),$(OBJ_PATH)/$(file))
