@@ -155,9 +155,10 @@ $(BIN_PATH)/$(PROJ_NAME).elf : $(AOBJS) $(COBJS)
 	@echo +++ Linking [$(notdir $@)]
 	@$(LN) $(LFLAGS) -o $@ $(patsubst %.o,$(OBJ_PATH)/%.o,$(^F)) $(LIBS)
 
-# Create the object directory if it does not exist yet
+# Create the object / binary directory if it does not exist yet
 check:
 	[ -d $(OBJ_PATH) ] || mkdir -p $(OBJ_PATH)
+	[ -d $(BIN_PATH) ] || mkdir -p $(BIN_PATH)
 
 #|--------------------------------------------------------------------------------------|
 #| Compile and assemble                                                                 |
